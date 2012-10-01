@@ -9,8 +9,8 @@
 import Image
 import sys
 
-img_fuente_default = "rojo.jpg"
-img_salida_default = "img_binaria.bmp"
+img_fuente_default = "img/rojo.jpg"
+img_salida_default = "img/img_binaria.bmp"
 nombre_archivo_bin = "datos.txt" #aqui se almacenan los datos de la imagen en 1's y 0's
 
 def main():
@@ -19,10 +19,13 @@ def main():
         print "Abriendo " + sys.argv[1]
     else:
         img_fuente = raw_input("ubicacion de la imagen:")#capturar por pantalla la ubicacion
+        img_fuente = "img/"+img_fuente
 
-    if(img_fuente != None):
+    if(img_fuente != None or img_fuente != ""):
         img_fuente = img_fuente_default
         
+    img_salida_default = img_fuente + ".bmp"
+    
     archi=open(nombre_archivo_bin,'w')
     archi.close()
 
