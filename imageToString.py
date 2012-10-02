@@ -46,6 +46,7 @@ def reader():
             data = s.read()
             print "Datos recibidos:\n%s" % (data)
             #enviar data a decodificar
+            codificarImg(data)
         except:
             print "Excepcion: Abortando..."
             break;       
@@ -64,6 +65,7 @@ def writer():
             else:
                 #-- Enviar tecla por el puerto serie
                 s.write(img_bin)
+#                codificarImg(img_bin)
                 print "\nenviando:\n%s" % (img_bin)
         except ValueError as e: #-- Si se ha pulsado control-c terminar
             print "Excep Abortando: %s " % (e)
@@ -135,6 +137,32 @@ def binarizar():
     #im.show()                   #muestra la nueva imagen binarizada
     return imageString          #retorna un string con los datos de la imagen 
 
+def codificarImg(img): #Recibe el string de la imagen modificada
+    p=img.rsplit(',')
+    x=p[0]
+    y=p[1]
+    pv=p[2].rsplit('.')
+    print "imagen de: %s x %s \n"  % (x,y)
+    try:
+        size=int(x),int(y)
+    
+        im=Image.new('RGB', size)
+                
+        for i in range(int(y)):
+            for j in range(int(x)):
+                if pv[i][j]=="1":
+                    im.putpixel((j,i),(0,0,0)) #NO ESTA HACIENDO ESTO! SE VA SIEMPRE POR EL ELSE
+                else:
+                    im.putpixel((j,i),(255,255,255))
+    
+        im.save("newImage.bmp")
+        im.show() 
+    
+    except ValueError as details:
+        
+        print details
+
+
 def main():
     openPort(Port)                      #abrir puerto 
     r = threading.Thread(target=reader) #-- Lanzar el hilo que lee del puerto serie y saca por pantalla
@@ -143,8 +171,8 @@ def main():
     fin=1
     r.join()
     s.close()
-    
+#    
     #-- Fin del programa
     print "\n\n--- Fin ---"
     
-main()
+main()
