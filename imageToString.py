@@ -71,7 +71,7 @@ def writer():
             print "Excep Abortando: %s " % (e)
             break
         except:
-            print "Error al finalizar"
+            print "\nError al binarizar"
             break
 
 def binarizar():
@@ -96,9 +96,8 @@ def binarizar():
         print "Abriendo " + sys.argv[1]
     else:
         img_fuente = raw_input("ubicacion de la imagen:")#capturar por pantalla la ubicacion
-        img_fuente = "img/"+img_fuente
 
-    if(img_fuente != None or img_fuente != ""):
+    if(img_fuente == None or img_fuente == ""):
         img_fuente = img_fuente_default
         
     img_salida_default = img_fuente + ".bmp" # esta linea se puede mejorar (quitar la extension inicial de la imagen)
