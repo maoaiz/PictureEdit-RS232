@@ -3,17 +3,92 @@
 #Programa para binarizar imagenes
 #agradecimientos a Mariano Maccarrone.
 
-#Modificado por: @MaoAiz - @JonathanMG7
+#Adaptado para binarizar imagenes y enviarlas por el puerto serie por: 
+#                    @MaoAiz - @JonathanMG7
 
 
 import Image
 import sys
+import serial
+import threading
 
 img_fuente_default = "img/rojo.jpg"
 img_salida_default = "img/img_binaria.bmp"
 nombre_archivo_bin = "datos.txt" #aqui se almacenan los datos de la imagen en 1's y 0's
+fin = 0                          #-- Variable para indicar al thread que termine
+EXITCHARCTER = 'exit'   #ctrl+D  #-- Caracter empleado para salir del terminarl
+s = None
+r = None
+Port = 0
 
-def main():
+def openPort(Puerto=0):
+    '''
+        Abre el puerto
+    '''
+    try:
+        s = serial.Serial(Puerto, 9600)
+        s.timeout=1;
+    except serial.SerialException:
+        sys.stderr.write("Error al abrir puerto: " + str(Puerto))
+        sys.exit(1)
+    
+    print ("Puerto serie (%s): %s") % (str(Puerto),s.portstr)
+    print ("--- Miniterm v2.0 --- Ctrl-D para terminar\n\n")
+
+def reader():
+    '''
+     Este thread se ejecuta infinitamente. Esta todo el rato leyendo datos
+     del puerto serie
+    '''
+    #-- Cuando fin=1 se termina el thread
+    while not(fin):
+        try:
+            data = s.read()
+            print "Datos recibidos:\n%s" % (data)
+            #enviar data a decodificar
+        except:
+            print "Excepcion: Abortando..."
+            break;       
+
+def writer():
+    '''
+    Este es la funcion principal. Llega un string que se envia por el puerto serie
+    '''
+    while 1:
+        try:
+            img_bin = binarizar()   #string de la imagen binarizada
+            #-- Si es la tecla de fin se termina
+            if img_bin == EXITCHARCTER:
+                fin = 1
+                break
+            else:
+                #-- Enviar tecla por el puerto serie
+                s.write(img_bin)
+                print "\nenviando:\n%s" % (img_bin)
+        except ValueError as e: #-- Si se ha pulsado control-c terminar
+            print "Excep Abortando: %s " % (e)
+            break
+        except:
+            print "Error al finalizar"
+            break
+
+def binarizar():
+    '''
+    captura una imagen y la binariza.
+    retorna un string con los datos de la imagen binarizada incluyendo ancho y alto
+    en el siguiente formato:
+        ancho,alto,fila1.fila2.fila3 donde cada fila son la secuencia de los pixeles de la imagen
+        1 = representa color negro
+        0 = representa color blanco 
+        ej: 10,2,1111111111.10000000001 
+        esto seria una img de 10x2
+        la fila 1 esta pintada y la fila 2 solo esta pintada en el primer y ultimo pixel
+        
+    Esta funcion lee el primer argumento pasado por consola
+        ej: $ python imageToString.py miImagen.jpg 
+    
+    '''
+    #capturar imagen desde argumentos del sistema o desde consola
     if(len(sys.argv) > 1):
         img_fuente = sys.argv[1] # primer parametro   #
         print "Abriendo " + sys.argv[1]
@@ -24,24 +99,28 @@ def main():
     if(img_fuente != None or img_fuente != ""):
         img_fuente = img_fuente_default
         
-    img_salida_default = img_fuente + ".bmp"
+    img_salida_default = img_fuente + ".bmp" # esta linea se puede mejorar (quitar la extension inicial de la imagen)
     
+    #crear archivo para guardar datos binarios de la imagen
     archi=open(nombre_archivo_bin,'w')
     archi.close()
 
+    #abrir imagen para recorrer
     im = Image.open(img_fuente)
     x,y = im.size
     print "\nimagen: %s \nsize:\tx: %d \ty: %d \n" % (img_fuente,x,y)
     
+    #guardar datos en el archivo
     datos = open(nombre_archivo_bin,"a")
     imageString = str(x)+","+str(y)+","
+    #recorrer la imagen
     for i in range(y):
             for j in range(x):
                     r,g,b = im.getpixel((j,i))
                     if  ((r+g+b)/3) < 125:
-                            im.putpixel((j,i),(0,0,0))
-                            datos.write("1")
-                            imageString += "1"
+                            im.putpixel((j,i),(0,0,0))  #crear nueva imagen
+                            datos.write("1")            #guardar en datos
+                            imageString += "1"          #crear string de la imagen
                     else:
                             im.putpixel((j,i),(255,255,255))
                             datos.write("0")
@@ -51,10 +130,21 @@ def main():
             imageString += "."
 
     print "Revisa el archivo %s, ahi quedo toda la informacion" % (nombre_archivo_bin)
-    
-    datos.close()
-    im.show()
-    im.save(img_salida_default) 
-    return imageString
+    datos.close()               #cierra el archivo con los datos
+    im.save(img_salida_default) #guarda la imagen binarizada 
+    #im.show()                   #muestra la nueva imagen binarizada
+    return imageString          #retorna un string con los datos de la imagen 
 
+def main():
+    openPort(Port)                      #abrir puerto 
+    r = threading.Thread(target=reader) #-- Lanzar el hilo que lee del puerto serie y saca por pantalla
+    r.start()
+    writer()                            #enviar imagen por puerto serie RS232
+    fin=1
+    r.join()
+    s.close()
+    
+    #-- Fin del programa
+    print "\n\n--- Fin ---"
+    
 main()
