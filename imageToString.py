@@ -15,64 +15,75 @@ import threading
 img_fuente_default = "img/rojo.jpg"
 img_salida_default = "img/img_binaria.bmp"
 nombre_archivo_bin = "datos.txt" #aqui se almacenan los datos de la imagen en 1's y 0's
-fin = 0                          #-- Variable para indicar al thread que termine
 EXITCHARCTER = 'exit'   #ctrl+D  #-- Caracter empleado para salir del terminarl
-s = None
-r = None
-Port = 0
+global fin                          #-- Variable para indicar al thread que termine
+global s
+global r
+global Port
+global data
 
-def openPort(Puerto=0):
+def openPort(Port=0):
     '''
         Abre el puerto
     '''
     try:
-        s = serial.Serial(Puerto, 9600)
-        s.timeout=1;
+            s = serial.Serial(Port, 9600)
+            s.timeout=1;
     except serial.SerialException:
-        sys.stderr.write("Error al abrir puerto: " + str(Puerto))
-        sys.exit(1)
-    
-    print ("Puerto serie (%s): %s") % (str(Puerto),s.portstr)
-    print ("--- Miniterm v2.0 --- Ctrl-D para terminar\n\n")
+            sys.stderr.write("Error al abrir puerto: " + str(Port)+"\n")
+            sys.exit(1)
+
+    print ("Puerto serie (%s): %s") % (str(Port),s.portstr)
+    #print ("--- Miniterm v2.0 --- salir para terminar\n\n")
 
 def reader():
-    '''
-     Este thread se ejecuta infinitamente. Esta todo el rato leyendo datos
-     del puerto serie
-    '''
-    #-- Cuando fin=1 se termina el thread
-    while not(fin):
-        try:
-            data = s.read()
-            print "Datos recibidos:\n%s" % (data)
-            #enviar data a decodificar
-            codificarImg(data)
-        except:
-            print "Excepcion: Abortando..."
-            break;       
-
+	'''
+	 Este thread se ejecuta infinitamente. Esta todo el rato leyendo datos
+	 del puerto serie
+	'''
+	data = ""
+	#-- Cuando fin=1 se termina el thread
+	while not(fin):
+		try:
+			data += s.read()
+			#print "%s" % (data)
+			#enviar data a decodificar
+			if data[len(data)-1]=="q":
+				codificarImg(data[0:-1])
+				data = ""
+		except serial.SerialException:
+			print "Excepcion: Abortando..."
+			break;     
+			
+	print "data: %s" % data
+	
+	
 def writer():
-    '''
-    Este es la funcion principal. Llega un string que se envia por el puerto serie
-    '''
-    while 1:
-        try:
-            img_bin = binarizar()   #string de la imagen binarizada
-            #-- Si es la tecla de fin se termina
-            if img_bin == EXITCHARCTER:
-                fin = 1
-                break
-            else:
-                #-- Enviar tecla por el puerto serie
-                s.write(img_bin)
-#                codificarImg(img_bin)
-                print "\nenviando:\n%s" % (img_bin)
-        except ValueError as e: #-- Si se ha pulsado control-c terminar
-            print "Excep Abortando: %s " % (e)
-            break
-        except:
-            print "\nError al binarizar"
-            break
+	img_bin = binarizar()+"q"
+	print "La Imagen se binarizo con exito.\n"
+	while 1:
+		try:          #img_bin = binarizar()   #string de la imagen binarizada            #-- Si es la tecla de fin se termina
+			op = 	raw_input("Desea enviar la imagen por el puerto serie?(y/n/exit):")
+			if op == EXITCHARCTER:
+				fin = 1
+				break
+			else:
+				#-- Enviar tecla por el puerto serie
+				if op == "y":
+					s.write(img_bin)
+					print "\nenviado:\n" 
+				else:
+					if op == "n":
+						writer()
+					else:
+						print "\n----------------Ingresa una opcion valida----------------\n"
+						
+		except ValueError as e: #-- Si se ha pulsado control-c terminar
+			print "Excep Abortando: %s \n" % (e)
+			break
+		except:
+			print "\nError al enviar!\n"
+			break
 
 def binarizar():
     '''
@@ -130,48 +141,49 @@ def binarizar():
             datos.write("\n")
             imageString += "."
 
-    print "Revisa el archivo %s, ahi quedo toda la informacion" % (nombre_archivo_bin)
+    print "Revisa el archivo %s, ahi quedo toda la informacion\n" % (nombre_archivo_bin)
     datos.close()               #cierra el archivo con los datos
     im.save(img_salida_default) #guarda la imagen binarizada 
     #im.show()                   #muestra la nueva imagen binarizada
     return imageString          #retorna un string con los datos de la imagen 
 
 def codificarImg(img): #Recibe el string de la imagen modificada
-    p=img.rsplit(',')
-    x=p[0]
-    y=p[1]
-    pv=p[2].rsplit('.')
-    print "imagen de: %s x %s \n"  % (x,y)
-    try:
-        size=int(x),int(y)
-    
-        im=Image.new('RGB', size)
-                
-        for i in range(int(y)):
-            for j in range(int(x)):
-                if pv[i][j]=="1":
-                    im.putpixel((j,i),(0,0,0)) #NO ESTA HACIENDO ESTO! SE VA SIEMPRE POR EL ELSE
-                else:
-                    im.putpixel((j,i),(255,255,255))
-    
-        im.save("newImage.bmp")
-        im.show() 
-    
-    except ValueError as details:
-        
-        print details
+	print "\n"
+	p=img.rsplit(',')
+	x=p[0]
+	y=p[1]
+	pv=p[2].rsplit('.')
+	print "imagen de: %s x %s \n"  % (x,y)
+	try:
+		size=int(x),int(y)
+	
+		im=Image.new('RGB', size)
+				
+		for i in range(int(y)):
+			for j in range(int(x)):
+				if pv[i][j]=="1":
+					im.putpixel((j,i),(0,0,0)) #NO ESTA HACIENDO ESTO! SE VA SIEMPRE POR EL ELSE
+				else:
+					im.putpixel((j,i),(255,255,255))
+	
+		im.save("newImage.bmp")
+		im.show() 
+	
+	except ValueError as details:
+		
+		print details
 
 
 def main():
-    openPort(Port)                      #abrir puerto 
-    r = threading.Thread(target=reader) #-- Lanzar el hilo que lee del puerto serie y saca por pantalla
-    r.start()
-    writer()                            #enviar imagen por puerto serie RS232
-    fin=1
-    r.join()
-    s.close()
-#    
-    #-- Fin del programa
-    print "\n\n--- Fin ---"
-    
-main()
+	Port = 0
+	openPort(Port)                      #abrir puerto 
+	r = threading.Thread(target=reader) #-- Lanzar el hilo que lee del puerto serie y saca por pantalla
+	r.start()
+	writer()                            #enviar imagen por puerto serie RS232
+	fin=1
+	#-- Fin del programa
+	print "\n\n--- Fin ---"
+	r.join()
+	s.close()
+
+main()
