@@ -163,7 +163,7 @@ def codificarImg(img): #Recibe el string de la imagen modificada
 				else:
 					im.putpixel((j,i),(255,255,255))
 	
-		im.save("newImage.bmp")
+		im.save("img/recibido/newImage.bmp")
 		im.show() 
 	
 	except ValueError as details:
