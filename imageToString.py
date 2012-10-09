@@ -19,28 +19,24 @@ EXITCHARCTER = 'exit'   #ctrl+D  #-- Caracter empleado para salir del terminarl
 global fin                          #-- Variable para indicar al thread que termine
 global s
 global r
-global Port
+Port=0
 global data
 
-def openPort(Port=0):
-    '''
-        Abre el puerto
-    '''
-    try:
-            s = serial.Serial(Port, 9600)
-            s.timeout=1;
-    except serial.SerialException:
-            sys.stderr.write("Error al abrir puerto: " + str(Port)+"\n")
-            sys.exit(1)
+try:
+		s = serial.Serial(Port, 115200)
+		s.timeout=1;
+except serial.SerialException:
+		sys.stderr.write("Error al abrir puerto: " + str(Port)+"\n")
+		sys.exit(1)
 
-    print ("Puerto serie (%s): %s") % (str(Port),s.portstr)
-    #print ("--- Miniterm v2.0 --- salir para terminar\n\n")
+print ("Puerto serie (%s): %s") % (str(Port),s.portstr)
 
 def reader():
 	'''
 	 Este thread se ejecuta infinitamente. Esta todo el rato leyendo datos
 	 del puerto serie
 	'''
+	fin = 0
 	data = ""
 	#-- Cuando fin=1 se termina el thread
 	while not(fin):
@@ -48,9 +44,10 @@ def reader():
 			data += s.read()
 			#print "%s" % (data)
 			#enviar data a decodificar
-			if data[len(data)-1]=="q":
-				codificarImg(data[0:-1])
-				data = ""
+			if len(data) > 1:
+				if data[len(data)-1]=="q":
+					codificarImg(data[0:-1])
+					data = ""
 		except serial.SerialException:
 			print "Excepcion: Abortando..."
 			break;     
@@ -176,7 +173,6 @@ def codificarImg(img): #Recibe el string de la imagen modificada
 
 def main():
 	Port = 0
-	openPort(Port)                      #abrir puerto 
 	r = threading.Thread(target=reader) #-- Lanzar el hilo que lee del puerto serie y saca por pantalla
 	r.start()
 	writer()                            #enviar imagen por puerto serie RS232
